@@ -3,21 +3,30 @@ import java.awt.*;
 
 public class Main {
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Pebble Game");
-        frame.setLayout(new BorderLayout());
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Pebble Game");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setSize(1000, 600);
+            frame.setLayout(new BorderLayout());
 
-        JPanel leftPanel = new TMSimulator();
-        leftPanel.setBorder(BorderFactory.createTitledBorder("Turing Machine Simulator"));
+            CardLayout cardLayout = new CardLayout();
+            JPanel mainPanel = new JPanel(cardLayout);
 
-        Graph graph = new Graph();
-        JPanel rightPanel = new PanelGraph(graph);
-        rightPanel.setBorder(BorderFactory.createTitledBorder("Graph View"));
+            TmBuilder builderPanel = new TmBuilder(turingMachine -> {
+                TmSimulator simulator = new TmSimulator(turingMachine, 3, 100);
+                Graph graph = new Graph(); //todo converted graph
+                PanelPebbleGame pebblePanel = new PanelPebbleGame(graph);
+                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, simulator, pebblePanel);
+                splitPane.setDividerLocation(600);
 
-        frame.add(leftPanel, BorderLayout.WEST);
-        frame.add(rightPanel, BorderLayout.CENTER);
+                mainPanel.add(splitPane, "simulator");
+                cardLayout.show(mainPanel, "simulator");
+            });
 
-        frame.setSize(800, 400); // Made it a bit wider
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
+            mainPanel.add(builderPanel, "builder");
+
+            frame.add(mainPanel, BorderLayout.CENTER);
+            frame.setVisible(true);
+        });
     }
 }
