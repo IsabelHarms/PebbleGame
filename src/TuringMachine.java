@@ -4,8 +4,8 @@ public class TuringMachine {
 
     public static class TmState {
         private final String name;
-        private final boolean isStart;
-        private final boolean isAccept;
+        private boolean isStart;
+        private boolean isAccept;
         private final int index;
 
         public TmState(String name, boolean isStart, boolean isAccept, int index) {
@@ -18,6 +18,10 @@ public class TuringMachine {
         public String getName() { return name; }
         public boolean isStart() { return isStart; }
         public boolean isAccept() { return isAccept; }
+
+        public void setStart(boolean isStart) {
+            this.isStart = isStart;
+        }
         public int getIndex() { return index; }
 
         @Override
@@ -76,15 +80,119 @@ public class TuringMachine {
         public List<Integer> getMoveDirections() { return moveDirections; }
     }
 
+    class Tape {
+        private List<Character> tape;
+        private int headPosition;
+
+        private int lastMoveDirection = 0;
+
+        public Tape() {
+            this.tape = new ArrayList<Character>();
+            this.headPosition = 0;
+        }
+
+        public Character read() {
+            if (headPosition < 0) {
+                expandLeft();
+            }
+            if (headPosition >= tape.size()) {
+                return null;
+            }
+            return tape.get(headPosition);
+        }
+
+        public void write(Character c) {
+            if (headPosition < 0) {
+                expandLeft();
+            }
+            while (headPosition >= tape.size()) {
+                tape.add(null);
+            }
+            tape.set(headPosition, c);
+        }
+
+        public void move(int direction) {
+            lastMoveDirection = direction;
+            headPosition += direction;
+            if (headPosition < 0) {
+                expandLeft();
+            }
+            while (headPosition >= tape.size()) {
+                tape.add(null);
+            }
+        }
+
+        private void expandLeft() {
+            tape.add(0, null);
+            headPosition++;
+        }
+
+        public Character getAt(int index) {
+            if (index >= 0 && index < tape.size()) {
+                Character c = tape.get(index);
+                return c != null ? c : '#';
+            } else {
+                return '#';
+            }
+        }
+
+
+        public int getLastMoveDirection() {
+            return lastMoveDirection;
+        }
+
+        public int getHeadPosition() {
+            return headPosition;
+        }
+
+        public List<Character> getTape() {
+            return tape;
+        }
+    }
+    private String timeComplexity = "O(?)";
+
     final Set<TmState> states = new HashSet<>();
     final Set<Character> alphabet = new HashSet<>();
     final Map<TmState, Map<TransitionInput, TransitionOutput>> transitions = new HashMap<>();
     private TmState startState;
     private Set<TmState> acceptStates = new HashSet<>();
 
+    private TmState currentState;
+
+    private Tape[] tapes;
+
+    public TuringMachine(int tapeCount, TmState startState, List<TmState> allStates, Set<TmState> acceptStates) {
+        this.tapes = new Tape[tapeCount];
+        for (int i = 0; i < tapeCount; i++) {
+            this.tapes[i] = new Tape();
+        }
+
+        this.startState = startState;
+        this.currentState = startState;
+
+        for (TmState state : allStates) {
+            this.states.add(state);
+            if (acceptStates.contains(state)) {
+                this.acceptStates.add(state);
+            }
+        }
+    }
+
     public Set<TmState> getStates() { return states; }
     public Set<Character> getAlphabet() { return alphabet; }
+
+    public TmState getCurrentState() { return currentState; }
     public Map<TmState, Map<TransitionInput, TransitionOutput>> getTransitions() { return transitions; }
+
+    public Tape[] getTapes() { return tapes; }
+
+    public void setTimeComplexity(String complexity) {
+        this.timeComplexity = complexity.startsWith("O(") ? complexity : "O(" + complexity + ")";
+    }
+
+    public String getTimeComplexity() {
+        return timeComplexity;
+    }
 
     public void addState(TmState state) {
         states.add(state);
@@ -117,10 +225,67 @@ public class TuringMachine {
         return stateTransitions.get(input);
     }
 
-    public boolean isAcceptState(TmState state) {
-        return acceptStates.contains(state);
+    public void initInput(String word) {
+        for (int i = 0; i < word.length(); i++) {
+            tapes[0].write(word.charAt(i));
+            tapes[0].move(1);
+        }
+        tapes[0].headPosition = 0;
     }
 
+    public void initTapes() {
+        for (int i = 0; i < this.tapes.length; i++) {
+            this.tapes[i] = new Tape();
+        }
+    }
+
+    public void reset() {
+        initTapes();
+        currentState = getStartState();
+    }
+
+    public void step() {
+        if (currentState.isAccept) {
+            return; // todo
+        }
+
+        List<Character> readSymbols = new ArrayList<>();
+        for (Tape tape : tapes) {
+            readSymbols.add(tape.getAt(tape.getHeadPosition()));
+        }
+
+        TransitionInput input = new TransitionInput(readSymbols);
+        Map<TransitionInput, TransitionOutput> stateTransitions = transitions.get(currentState);
+        if (stateTransitions == null) return;
+
+        TransitionOutput output = stateTransitions.get(input);
+        if (output == null) return;
+
+        List<Character> writeSymbols = output.getSymbolsToWrite();
+        List<Integer> moveDirections = output.getMoveDirections();
+
+        for (int i = 0; i < tapes.length; i++) {
+            tapes[i].write(writeSymbols.get(i));
+            tapes[i].move(moveDirections.get(i));
+        }
+
+        currentState = output.getNextState();
+    }
+
+
+    public int getExpectedMoveDirection() {
+        List<Character> symbols = new ArrayList<>();
+        for (Tape t : tapes) {
+            symbols.add(t.getAt(t.getHeadPosition()));
+        }
+
+        TransitionInput input = new TransitionInput(symbols);
+        Map<TransitionInput, TransitionOutput> stateTransitions = transitions.get(currentState);
+        if (stateTransitions == null) return 0;
+
+        TransitionOutput output = stateTransitions.get(input);
+        return output != null ? output.getMoveDirections().get(0) : 0;
+    }
     public String generateDescription() {
         StringBuilder sb = new StringBuilder();
         sb.append("States:\n");

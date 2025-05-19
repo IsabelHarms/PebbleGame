@@ -27,7 +27,7 @@ public class TransitionTableModel extends AbstractTableModel {
 
     @Override
     public int getColumnCount() {
-        return alphabet.size() + 1; // +1 for state name column
+        return alphabet.size() + 1;
     }
 
     @Override
