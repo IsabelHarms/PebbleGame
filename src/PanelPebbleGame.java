@@ -13,6 +13,7 @@ class PanelPebbleGame extends Panel implements MouseListener, MouseMotionListene
     JButton nextButton = new JButton("Next");
     JButton backButton = new JButton("Back");
 
+    private State draggedNode;
     Pebbler pebbler;
     public PanelPebbleGame(Graph graph) {
         super(graph);
@@ -29,10 +30,10 @@ class PanelPebbleGame extends Panel implements MouseListener, MouseMotionListene
         nextButton.setPreferredSize(new Dimension(200, 50));
         backButton.setVisible(false);
         nextButton.setVisible(false);
-        bottomPanel.add(startTimePebblingButton);
-        bottomPanel.add(startSpacePebblingButton);
-        bottomPanel.add(backButton);
-        bottomPanel.add(nextButton);
+        //bottomPanel.add(startTimePebblingButton);
+        //bottomPanel.add(startSpacePebblingButton);
+        //bottomPanel.add(backButton);
+        //bottomPanel.add(nextButton);
 
         addMouseListener(this);
         addMouseMotionListener(this);
@@ -49,6 +50,7 @@ class PanelPebbleGame extends Panel implements MouseListener, MouseMotionListene
     private void startSpacePebbling() {
         switchButtons();
         pebbler.pebbleSpace();
+        System.out.println(pebbler.pebbleOrder);
     }
 
     private void switchButtons() {
@@ -71,6 +73,7 @@ class PanelPebbleGame extends Panel implements MouseListener, MouseMotionListene
             for (State node : graph.getStates()) {
                 if (node.contains(e.getX(), e.getY())) {
                     node.currentlyPebbled = false;
+                    super.graphStateTextArea.setText("current: " + graph.getCurrentPebbleCount() + "\n max: " + graph.getMaxPebbleCount());
                     repaint();
                     break;
                 }
@@ -80,25 +83,35 @@ class PanelPebbleGame extends Panel implements MouseListener, MouseMotionListene
                 if (node.contains(e.getX(), e.getY()) && node.canBePebbled()) {
                     node.hasBeenPebbled = true;
                     node.currentlyPebbled = true;
-                    if (graph.fullyPebbled()) {
-                        graphStateTextArea.setText("won");
-                    }
+                    graph.updateMaxPebbleCount();
+                    super.graphStateTextArea.setText("current: " + graph.getCurrentPebbleCount() + "\n max: " + graph.getMaxPebbleCount());
                     repaint();
+                    if (graph.fullyPebbled()) {
+                        JOptionPane.showMessageDialog(this, "All states have been pebbled!");
+                    }
                     break;
                 }
             }
         }
-        updateGraphState();
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
-
+        //mouse right pressed on node = start edge
+        if (SwingUtilities.isLeftMouseButton(e)) {
+            //mouse left pressed on node = move node
+            for (State node : graph.getStates()) {
+                if (node.contains(e.getX(), e.getY())) {
+                    draggedNode = node;
+                    break;
+                }
+            }
+        }
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
-
+        draggedNode = null;
     }
 
     @Override
@@ -113,7 +126,11 @@ class PanelPebbleGame extends Panel implements MouseListener, MouseMotionListene
 
     @Override
     public void mouseDragged(MouseEvent e) {
-
+        if (draggedNode != null) {
+            draggedNode.x = e.getX();
+            draggedNode.y = e.getY();
+            repaint();
+        }
     }
 
     @Override

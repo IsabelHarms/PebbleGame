@@ -6,7 +6,7 @@ class Panel extends JPanel{
     static final int NODE_RADIUS = 30;
     protected Graph graph;
     protected JTextPane  graphStateTextArea;
-    protected JScrollPane scrollPane;  // To make the text area scrollable
+    protected JScrollPane scrollPane;
     public Panel(Graph graph) {
 
         setLayout(new BorderLayout());
@@ -51,7 +51,6 @@ class Panel extends JPanel{
         double dx = endX - startX, dy = endY - startY;
         double distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Adjust end point to stop at the edge of the node
         double adjustedX2 = endX - (dx / distance) * NODE_RADIUS;
         double adjustedY2 = endY - (dy / distance) * NODE_RADIUS;
 
@@ -65,11 +64,6 @@ class Panel extends JPanel{
         double dx = endX - startX, dy = endY - startY;
         double distance = Math.sqrt(dx * dx + dy * dy);
 
-        int controlX = (startX + endX) / 2;
-        int controlY = (startY + endY) / 2;
-        int offset = 50;
-
-        double t = 0.85;
         double curveX = 0, curveY = 0;
         double tangentX = 0, tangentY = 0;
 
@@ -92,6 +86,4 @@ class Panel extends JPanel{
         g2.drawLine((int) curveX, (int) curveY, arrowX1, arrowY1);
         g2.drawLine((int) curveX, (int) curveY, arrowX2, arrowY2);
     }
-
-
 }

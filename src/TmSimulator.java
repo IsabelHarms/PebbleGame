@@ -1,6 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TmSimulator extends JPanel {
     private final int CELL_WIDTH = 30;
@@ -12,17 +14,17 @@ public class TmSimulator extends JPanel {
     private JButton stepButton;
     private JButton resetButton;
 
-    public TmSimulator(TuringMachine tm) {
+    private PanelGraph panelGraph;
+
+
+
+    public TmSimulator(TuringMachine tm, PanelGraph panelGraph) {
         super();
         this.tm = tm;
+        this.panelGraph = panelGraph;
 
         setLayout(new BorderLayout());
         setPreferredSize(new Dimension(800, 300));
-
-//        tapePanel = new TapePanel();
-//        tapePanel.setPreferredSize(new Dimension(CELL_WIDTH * VIEW_WIDTH + 60,
-//                CELL_WIDTH * tm.getTapes().length + 20));
-//        add(tapePanel, BorderLayout.CENTER);
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
 
@@ -72,66 +74,102 @@ public class TmSimulator extends JPanel {
         centerPanel.add(transitionScroll);
 
 // Machine description
+        stateLabel = new JLabel("State: " + tm.getCurrentState().getName());
         JTextArea descriptionArea = new JTextArea(tm.generateDescription());
         descriptionArea.setEditable(false);
         descriptionArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         JScrollPane descriptionScroll = new JScrollPane(descriptionArea);
         descriptionScroll.setPreferredSize(new Dimension(800, 100));
+        centerPanel.add(stateLabel);
         centerPanel.add(descriptionScroll);
 
         add(centerPanel, BorderLayout.CENTER);
 
         stepButton = new JButton("Step");
         stepButton.addActionListener(e -> {
-            int direction = tm.getExpectedMoveDirection();
+            List<Integer> moveDirs = tm.getExpectedMoveDirections();
 
-            int pixelSteps = CELL_WIDTH;
             int delay = 5;
-            final int[] offset = {0};
+            AtomicInteger index = new AtomicInteger();
+            int pixelSteps = CELL_WIDTH;
+            int tapeCount = tm.getTapes().length;
+            int[] offsets = new int[tapeCount];
 
             Timer animationTimer = new Timer(delay, null);
+
             animationTimer.addActionListener(ev -> {
-                if (Math.abs(offset[0]) < pixelSteps) {
-                    offset[0] += direction;
-                    tapePanel.setOffset(offset[0]);
-                } else {
+                boolean allDone = true;
+
+                for (int i = 0; i < tapeCount; i++) {
+                    int visualDirection = moveDirs.get(i) * CELL_WIDTH; // simulate target shift
+                    int step = Integer.signum(visualDirection); // either +1, -1, or 0
+                    if (Math.abs(offsets[i]) < Math.abs(visualDirection)) {
+                        offsets[i] += step;
+                        tapePanel.setOffset(i, offsets[i]);
+                        allDone = false;
+                    }
+                }
+
+                if (allDone) {
                     animationTimer.stop();
+                    if(!tm.getCurrentState().isAccept()) {
+                        tm.step(this);
+                        panelGraph.makeNextNode(tm);
+                        panelGraph.repaint();
+                        for (int i = 0; i < tapeCount; i++) {
+                            tapePanel.setOffset(i, 0);
+                        }
+                    }
 
-                    tm.step();
-
-                    tapePanel.setOffset(0);
                     tapePanel.repaint();
                     stateLabel.setText("State: " + tm.getCurrentState().getName());
+                    transitionModel.setCurrentState(tm.getCurrentState());
+                    repaint();
                 }
             });
+
             animationTimer.start();
         });
-
-
 
         resetButton = new JButton("Reset");
         resetButton.addActionListener(e -> {
             tm.reset();
+            stepButton.setEnabled(true);
             stateLabel.setText("State: " + tm.getCurrentState().getName());
             tapePanel.repaint();
+            panelGraph.reset();
         });
 
-        stateLabel = new JLabel("State: " + tm.getCurrentState().getName());
         JPanel controlPanel = new JPanel();
         controlPanel.add(stepButton);
         controlPanel.add(resetButton);
-        controlPanel.add(stateLabel);
 
         add(controlPanel, BorderLayout.SOUTH);
 
         setVisible(true);
+
+        panelGraph.makeFirstNode(tm);
+    }
+
+    public void disableStepButton() {
+        stepButton.setEnabled(false);
     }
 
     private class TapePanel extends JPanel {
-        private int offsetX = 0;
+        private int[] offsetsX;
 
-        public void setOffset(int offset) {
-            this.offsetX = offset;
+        public TapePanel() {
+            // Initialize offsets for each tape
+            this.offsetsX = new int[tm.getTapes().length];
+            Arrays.fill(offsetsX, 0);
+        }
+        public void setOffset(int bandIndex, int offset) {
+            this.offsetsX[bandIndex] = offset;
+            repaint();
+        }
+
+        public void resetOffsets() {
+            this.offsetsX = new int[tm.getTapes().length];
             repaint();
         }
 
@@ -148,7 +186,7 @@ public class TmSimulator extends JPanel {
 
                 for (int j = 0; j < VIEW_WIDTH; j++) {
                     int tapeIndex = start + j;
-                    int x = j * CELL_WIDTH - offsetX + 30;
+                    int x = j * CELL_WIDTH - offsetsX[i] + 30;
                     int y = i * CELL_WIDTH + 10;
 
                     g.setColor(Color.WHITE);

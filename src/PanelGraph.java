@@ -5,16 +5,21 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 
 class PanelGraph extends Panel implements MouseListener, MouseMotionListener {
     private State draggedNode;
     private State edgeStartNode = null;
     private int tempX, tempY;
 
+    private State prevState;
+
     JButton exportButton = new JButton("Export Graph");
     JButton importButton = new JButton("Import Graph");
     JButton startPebbleGameButton = new JButton("Start Pebble Game");
-    public PanelGraph(Graph graph) {
+
+    List<State> lastSegment;
+    public PanelGraph(Graph graph, JSplitPane splitPane) {
         super(graph);
         JPanel topButtonPanel = new JPanel();
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -39,11 +44,15 @@ class PanelGraph extends Panel implements MouseListener, MouseMotionListener {
             if(!graph.isValid) {
                 return;
             }
-            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
-            frame.setContentPane(new PanelPebbleGame(graph));
-            frame.revalidate();
-            frame.repaint();
+            splitPane.setRightComponent(new PanelPebbleGame(graph));
         });
+    }
+
+    public void reset() {
+        this.graph = new Graph();
+        this.prevState = null;
+        this.lastSegment = null;
+        repaint();
     }
 
     @Override
@@ -206,5 +215,81 @@ class PanelGraph extends Panel implements MouseListener, MouseMotionListener {
             updateGraphState();
         }
     }
+
+    public void makeFirstNode(TuringMachine tm) {
+
+        State state = new State(500, 500, 0, 30);
+
+        TuringMachine.Tape[] tapes = tm.getTapes();
+        for (TuringMachine.Tape tape : tapes) {
+            tape.addLastSegmentOfBlock(state);
+        }
+
+        prevState = state;
+        graph.index++;
+        graph.addState(state);
+    }
+
+    public void makeNextNode(TuringMachine tm) {
+        int centerX = 500;
+        int centerY = 500;
+        int stepSize = 100; // Distance between nodes
+
+        // Generate spiral coordinates based on step index
+        int index = graph.index;
+
+        int x = 0;
+        int y = 0;
+        int dx = 1;
+        int dy = 0;
+        int segmentLength = 1;
+        int segmentPassed = 0;
+        int directionChanges = 0;
+
+        // Simulate spiral walk until reaching the desired index
+        for (int i = 0; i < index; i++) {
+            x += dx;
+            y += dy;
+            segmentPassed++;
+
+            if (segmentPassed == segmentLength) {
+                // Change direction: right→down→left→up→right→...
+                segmentPassed = 0;
+                int temp = dx;
+                dx = -dy;
+                dy = temp;
+                directionChanges++;
+
+                if (directionChanges % 2 == 0) {
+                    segmentLength++;
+                }
+            }
+        }
+
+        int nodeX = centerX + x * stepSize;
+        int nodeY = centerY + y * stepSize;
+
+        State state = new State(nodeX, nodeY, index, 30);
+        if (prevState != null) {
+            Edge edge = new Edge(prevState, state);
+            graph.addEdge(edge);
+
+        }
+
+        TuringMachine.Tape[] tapes = tm.getTapes();
+        for (TuringMachine.Tape tape : tapes) {
+            State prevSegmentOfBlock = tape.getLastSegmentOfBlock();
+            if(prevSegmentOfBlock != null) {
+                Edge edge = new Edge(prevSegmentOfBlock, state);
+                graph.addEdge(edge);
+            }
+            tape.changeLastSegmentOfBlock(state);
+        }
+
+        prevState = state;
+        graph.index++;
+        graph.addState(state);
+    }
+
 
 }

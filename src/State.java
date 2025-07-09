@@ -126,7 +126,7 @@ class State {
         g.setFont(font);
 
         FontMetrics fm = g.getFontMetrics();
-        int labelWidth = fm.stringWidth(this.getNumber() + ""); //todo
+        int labelWidth = fm.stringWidth(this.getNumber() + "");
         int labelHeight = fm.getAscent();
         g.drawString(this.getNumber() + "", x - labelWidth / 2, y + labelHeight / 4);
     }
@@ -144,5 +144,18 @@ class State {
             }
         }
         return true;
+    }
+
+    public void pebble() {
+        for(State state : getPredecessors()) {
+            state.pebble();
+            currentlyPebbled = true;
+            hasBeenPebbled = true;
+        }
+    }
+
+    public void unPebble() {
+        currentlyPebbled = false;
+        //pebblecount --
     }
 }

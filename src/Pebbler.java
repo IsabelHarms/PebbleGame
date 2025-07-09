@@ -5,8 +5,11 @@ import java.util.Set;
 
 public class Pebbler {
     Graph graph;
+
+    List<PebbleMove> pebbleOrder;
     public Pebbler(Graph graph) {
         this.graph = graph;
+        pebbleOrder = new ArrayList<>();
     }
 
     public List<PebbleMove> pebbleTime() {
@@ -55,6 +58,31 @@ public class Pebbler {
 
 
     public void pebbleSpace() {
+        Set<State> pebbled = new HashSet<>();
+        Set<State> visited = new HashSet<>();
+        int time = 0;
 
+        for (State state : graph.getStates()) {
+            pebbleDFS(state, pebbled, visited, time);
+        }
+    }
+
+    private void pebbleDFS(State state, Set<State> pebbled, Set<State> visited, int time) {
+        if (visited.contains(state)) return;
+
+        for (State pred : state.getPredecessors()) {
+            pebbleDFS(pred, pebbled, visited, time);
+        }
+
+        pebbleOrder.add(new PebbleMove(PebbleMove.Action.PLACE, state, time++));
+        pebbled.add(state);
+
+        for (State pred : state.getPredecessors()) {
+            if (pebbled.contains(pred)) {
+                pebbleOrder.add(new PebbleMove(PebbleMove.Action.REMOVE, pred, time++));
+                pebbled.remove(pred);
+            }
+        }
+        visited.add(state);
     }
 }

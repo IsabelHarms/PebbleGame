@@ -13,10 +13,13 @@ public class Main {
             JPanel mainPanel = new JPanel(cardLayout);
 
             TmBuilder builderPanel = new TmBuilder(turingMachine -> {
-                TmSimulator simulator = new TmSimulator(turingMachine);
-                Graph graph = new Graph(); //todo converted graph
-                PanelPebbleGame pebblePanel = new PanelPebbleGame(graph);
-                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, simulator, pebblePanel);
+
+                Graph graph = new Graph();
+                JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+                PanelGraph graphPanel = new PanelGraph(graph, splitPane);
+                TmSimulator simulator = new TmSimulator(turingMachine, graphPanel);
+                splitPane.setLeftComponent(simulator);
+                splitPane.setRightComponent(graphPanel);
                 splitPane.setDividerLocation(600);
 
                 mainPanel.add(splitPane, "simulator");

@@ -17,7 +17,7 @@ public class TransitionTableRenderer extends DefaultTableCellRenderer {
         Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
         TuringMachine.TmState state = model.getStateAt(row);
-        if (state.equals(model.currentState)) {
+        if (state.getName().equals(model.currentState.getName())) {
             c.setBackground(Color.YELLOW);
         } else {
             c.setBackground(Color.WHITE);

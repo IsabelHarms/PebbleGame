@@ -1,3 +1,4 @@
+import javax.swing.*;
 import java.util.*;
 
 public class TuringMachine {
@@ -82,13 +83,32 @@ public class TuringMachine {
 
     class Tape {
         private List<Character> tape;
+
+        private List<State> lastSegment;
         private int headPosition;
 
         private int lastMoveDirection = 0;
 
         public Tape() {
             this.tape = new ArrayList<Character>();
+            this.lastSegment = new ArrayList<State>();
             this.headPosition = 0;
+        }
+
+        public State getLastSegmentOfBlock() {
+            return lastSegment.get(headPosition);
+        }
+
+        public void changeLastSegmentOfBlock(State state) {
+            lastSegment.set(headPosition, state);
+        }
+
+        public void addLastSegmentOfBlock(State state) {
+            lastSegment.add(headPosition, state);
+        }
+
+        public void expandLeftLastSegmentOfBlock() {
+            lastSegment.add(0, null);
         }
 
         public Character read() {
@@ -116,9 +136,13 @@ public class TuringMachine {
             headPosition += direction;
             if (headPosition < 0) {
                 expandLeft();
+                expandLeftLastSegmentOfBlock();
             }
             while (headPosition >= tape.size()) {
                 tape.add(null);
+            }
+            while (headPosition >= lastSegment.size()) {
+                lastSegment.add(null);
             }
         }
 
@@ -244,9 +268,10 @@ public class TuringMachine {
         currentState = getStartState();
     }
 
-    public void step() {
+    public void step(TmSimulator tmSimulator) {
         if (currentState.isAccept) {
-            return; // todo
+            JOptionPane.showMessageDialog(tmSimulator, "Turing Machine accepted.");
+            return;
         }
 
         List<Character> readSymbols = new ArrayList<>();
@@ -270,10 +295,14 @@ public class TuringMachine {
         }
 
         currentState = output.getNextState();
+        if (currentState.isAccept) {
+            JOptionPane.showMessageDialog(tmSimulator, "Turing Machine accepted.");
+            tmSimulator.disableStepButton();
+        }
     }
 
 
-    public int getExpectedMoveDirection() {
+    public List<Integer> getExpectedMoveDirections() {
         List<Character> symbols = new ArrayList<>();
         for (Tape t : tapes) {
             symbols.add(t.getAt(t.getHeadPosition()));
@@ -281,11 +310,12 @@ public class TuringMachine {
 
         TransitionInput input = new TransitionInput(symbols);
         Map<TransitionInput, TransitionOutput> stateTransitions = transitions.get(currentState);
-        if (stateTransitions == null) return 0;
+        if (stateTransitions == null) return Collections.nCopies(tapes.length, 0);
 
         TransitionOutput output = stateTransitions.get(input);
-        return output != null ? output.getMoveDirections().get(0) : 0;
+        return output != null ? output.getMoveDirections() : Collections.nCopies(tapes.length, 0);
     }
+
     public String generateDescription() {
         StringBuilder sb = new StringBuilder();
         sb.append("States:\n");

@@ -11,10 +11,15 @@ class Graph {
 
     int currentNodeNumber = 0;
 
+    int index = 0;
+
+    int maxPebbleCount = 0;
+
     public Graph() {
         states = new HashSet<>();
         edges = new HashSet<>();
         isValid = true;
+        index = 0;
     }
 
     public Set<State> getStates() {
@@ -57,6 +62,7 @@ class Graph {
             return "start building or import your graph.";
         }
         if (states.size()==1) {
+            isValid = true;
             return "valid";
         }
 
@@ -146,10 +152,9 @@ class Graph {
 
             // Kanten schreiben
             /*for (Edge edge : edges) {
-                // Zeichen korrekt als Komma-separierte Liste speichern
                 String characters = edge.characters.stream()
                         .map(String::valueOf)
-                        .collect(Collectors.joining(""));  // Zeichen ohne zusätzliche Kommas kombinieren
+                        .collect(Collectors.joining(""));
 
                 writer.write("EDGE," + edge.startState.number + "," + edge.endState.number + ","
                         + characters + "," + edge.arrowType);
@@ -198,6 +203,27 @@ class Graph {
             System.out.println("Graph erfolgreich importiert!");
         } catch (IOException e) {
             System.err.println("Fehler beim Importieren des Graphen: " + e.getMessage());
+        }
+    }
+
+    public int getCurrentPebbleCount() {
+        int count = 0;
+        for(State state: this.states) {
+            if (state.currentlyPebbled) {
+                count ++;
+            }
+        }
+        return count;
+    }
+
+    public int getMaxPebbleCount() {
+        return maxPebbleCount;
+    }
+
+    public void updateMaxPebbleCount() {
+        int currentPebbleCount = getCurrentPebbleCount();
+        if (currentPebbleCount > maxPebbleCount) {
+            maxPebbleCount = currentPebbleCount;
         }
     }
 

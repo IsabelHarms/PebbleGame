@@ -154,15 +154,16 @@ public class TmBuilder extends JPanel {
         importButton.addActionListener(e -> importTM());
         JButton exportButton = new JButton("Export TM");
         exportButton.addActionListener(e -> exportTM());
-        JButton validateButton = new JButton("Validate");
-        validateButton.addActionListener(e -> validateTM());
+
         finalizeButton = new JButton("Finalize");
-        finalizeButton.setEnabled(false);
-        finalizeButton.addActionListener(e -> finalizeTM());
+        finalizeButton.addActionListener(e -> {
+            if (validateTM()) {
+                finalizeTM();
+            }
+        });
 
         bottomPanel.add(importButton);
         bottomPanel.add(exportButton);
-        bottomPanel.add(validateButton);
         bottomPanel.add(finalizeButton);
 
         add(leftPanel, BorderLayout.WEST);
@@ -301,8 +302,6 @@ public class TmBuilder extends JPanel {
             if (s.isAccept()) acceptStates.add(s);
         }
 
-        if (startState == null) throw new IllegalStateException("No start state defined");
-
         int tapeCount = (Integer) tapeCountSpinner.getValue();
         TuringMachine tm = new TuringMachine(tapeCount, startState, allStates, acceptStates);
 
@@ -323,7 +322,7 @@ public class TmBuilder extends JPanel {
             String moveStr = (String) transitionsModel.getValueAt(i, 3);
             String toName = (String) transitionsModel.getValueAt(i, 4);
 
-            List<Character> readSymbols = toCharList(readStr);
+            List<Character> readSymbols = toCharList((String) transitionsModel.getValueAt(i, 1));
             List<Character> writeSymbols = toCharList(writeStr);
             List<Integer> moveDirs = toIntList(moveStr);
 
@@ -342,7 +341,11 @@ public class TmBuilder extends JPanel {
 
     private List<Character> toCharList(String s) {
         List<Character> list = new ArrayList<>();
-        for (char c : s.toCharArray()) list.add(c);
+        for (String part : s.split(",")) {
+            if (!part.trim().isEmpty()) {
+                list.add(part.trim().charAt(0));
+            }
+        }
         return list;
     }
 
@@ -359,20 +362,18 @@ public class TmBuilder extends JPanel {
         return null;
     }
 
-    private void validateTM() {
+    private boolean validateTM() {
         TuringMachine tm = buildTM();
         if (tm.getStartState() == null) {
             JOptionPane.showMessageDialog(this, "No start state defined.");
-            finalizeButton.setEnabled(false);
-            return;
+            return false;
         }
         if (tm.getAcceptStates().isEmpty()) {
             JOptionPane.showMessageDialog(this, "No accept state defined.");
-            finalizeButton.setEnabled(false);
-            return;
+            return false;
         }
-        finalizeButton.setEnabled(true);
         JOptionPane.showMessageDialog(this, "Turing Machine is valid.");
+        return true;
     }
 
     private String promptComplexityInput() {
@@ -436,19 +437,27 @@ public class TmBuilder extends JPanel {
                             stateListModel.addElement(new TuringMachine.TmState(name, isStart, isAccept, stateListModel.size()));
                         }
                         case "transitions" -> {
-                            String[] sides = line.split("->");
-                            String[] left = sides[0].trim().split(" ");
-                            String[] right = sides[1].trim().split(" ");
-                            transitionsModel.addRow(new Object[]{
-                                    left[0],           // from
-                                    left[1],           // read
-                                    right[1],          // write
-                                    right[2],          // move
-                                    right[0],          // to
-                                    "X"
-                            });
+                            String[] parts = line.split("->");
+                            String[] left = parts[0].trim().split(" ");
+                            String[] right = parts[1].trim().split(" ");
+
+                            String[] read = left[1].split(",");
+                            String[] write = right[1].split(",");
+                            String[] moves = right[2].split(",");
+
+                            int tapeCount = read.length;
+
+                            tapeCountSpinner.setValue(tapeCount);
                             tapeCountSpinner.setEnabled(false);
                             tapeCountLocked = true;
+
+                            transitionsModel.addRow(new Object[]{
+                                    left[0],                    // From State
+                                    String.join(",", read),    // Symbols Read
+                                    String.join(",", write),   // Symbols Write
+                                    String.join(",", moves),   // Move Dir
+                                    right[0],                  // To State
+                            });
                         }
                     }
                 }
